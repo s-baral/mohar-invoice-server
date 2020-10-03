@@ -16,5 +16,5 @@ app.use("/inspector", require("./routes/inspector"));
 app.use("/admin", require("./routes/admin"));
 
 app.listen(5000, () => {
-  console.log("Server is running on port 5000");
+  console.log("Server is running in port 5000");
 });
