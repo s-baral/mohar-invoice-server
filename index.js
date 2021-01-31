@@ -14,7 +14,7 @@ app.use(cors());
 app.use("/load_agent", require("./routes/load_agent"));
 app.use("/inspector", require("./routes/inspector"));
 app.use("/admin", require("./routes/admin"));
-
+app.use("/customer", require("./routes/customer"));
 app.listen(5000, () => {
   console.log("Server is running in port 5000");
 });
