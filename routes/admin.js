@@ -41,7 +41,7 @@ router.post("/login", async (req, res) => {
     //4. give the token
 
     const token = jwtGenerator(admin.rows[0].admin_id);
-    res.json({ token });
+    res.json({ status: "AK", data: token });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
@@ -143,4 +143,82 @@ router.post(
     }
   }
 );
+
+router.post("/pos", authorization, async (req, res) => {
+  try {
+    const { pos_id, description } = req.body;
+
+    const checkpos = await pool.query("SELECT * FROM pos WHERE pos_id = $1", [
+      pos_id,
+    ]);
+
+    if (checkpos.rows.length != 0) {
+      return res.json({
+        status: "NAK",
+        data: "The POS number already exist",
+      });
+    }
+
+    const pos = await pool.query(
+      "INSERT INTO pos (pos_id, pos_description) VALUES ($1, $2) RETURNING * ",
+      [pos_id, description]
+    );
+    res.json({ status: "AK", data: pos.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+router.get("/pos", authorization, async (req, res) => {
+  try {
+    const pos = await pool.query("SELECT * FROM pos");
+    res.json({ status: "AK", data: pos.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+router.get("/pos/:pos_id", authorization, async (req, res) => {
+  try {
+    const { pos_id } = req.params;
+    const pos = await pool.query("SELECT * FROM pos WHERE pos_id = $1", [
+      pos_id,
+    ]);
+    res.json({ status: "AK", data: pos.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+router.put("/pos/:pos_id", authorization, async (req, res) => {
+  try {
+    const { pos_id } = req.params;
+    const { new_pos_id, pos_description } = req.body;
+    const checkpos = await pool.query("SELECT * FROM pos WHERE pos_id = $1", [
+      pos_id,
+    ]);
+
+    if (checkpos.rows.length === 0) {
+      return res.json({
+        status: "NAK",
+        data: "POS not found",
+      });
+    }
+    const pos = await pool.query(
+      "UPDATE pos SET pos_id = $1, pos_description = $2 WHERE pos_id = $3 RETURNING *",
+      [new_pos_id, pos_description, pos_id]
+    );
+    console.log(pos.rows[0]);
+    res.json({
+      status: "AK",
+      data: pos.rows[0],
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
 module.exports = router;
