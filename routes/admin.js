@@ -309,4 +309,89 @@ router.put("/commission/:commission_id", authorization, async (req, res) => {
     res.json({ status: "NAK", data: "Server Error" });
   }
 });
+
+// Penalty Reason
+//Get all penalty reasons from table penalty-reasons
+router.get("/penalty_reason", authorization, async (req, res) => {
+  try {
+    const penalty_reason = await pool.query("SELECT * FROM penalty_reason");
+    res.json({ status: "AK", data: penalty_reason.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Post new penalty_reason with penalty amount
+router.post("/penalty_reason", authorization, async (req, res) => {
+  try {
+    const { issue, penalty_amount } = req.body;
+
+    const penalty_reason = await pool.query(
+      "INSERT INTO penalty_reason (issue, penalty_amount) VALUES ($1, $2) RETURNING * ",
+      [issue, penalty_amount]
+    );
+    res.json({ status: "AK", data: penalty_reason.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//get Single penalty reason from database
+
+router.get(
+  "/penalty_reason/:penalty_reason_id",
+  authorization,
+  async (req, res) => {
+    try {
+      const { penalty_reason_id } = req.params;
+      const penalty_reason = await pool.query(
+        "SELECT * FROM penalty_reason WHERE penalty_reason_id = $1",
+        [penalty_reason_id]
+      );
+      res.json({ status: "AK", data: penalty_reason.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//Update penalty_reason in database
+
+router.put(
+  "/penalty_reason/:penalty_reason_id",
+  authorization,
+  async (req, res) => {
+    try {
+      const { penalty_reason_id } = req.params;
+      const { issue, penalty_amount } = req.body;
+      const checkpenaltyreason = await pool.query(
+        "SELECT * FROM penalty_reason WHERE penalty_reason_id = $1",
+        [penalty_reason_id]
+      );
+
+      if (checkpenaltyreason.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "penalty reason not found",
+        });
+      }
+      const penalty_reason = await pool.query(
+        "UPDATE penalty_reason SET issue = $1, penalty_amount = $2 WHERE penalty_reason_id = $3 RETURNING *",
+        [issue, penalty_amount, penalty_reason_id]
+      );
+      console.log(penalty_reason.rows[0]);
+      res.json({
+        status: "AK",
+        data: penalty_reason.rows[0],
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
 module.exports = router;
