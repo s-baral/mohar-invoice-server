@@ -221,4 +221,92 @@ router.put("/pos/:pos_id", authorization, async (req, res) => {
     res.json({ status: "NAK", data: "Server Error" });
   }
 });
+
+// Commission
+//Get all commission
+router.get("/commission", authorization, async (req, res) => {
+  try {
+    const commission = await pool.query("SELECT * FROM commission");
+    res.json({ status: "AK", data: commission.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Post new commission
+router.post("/commission", authorization, async (req, res) => {
+  try {
+    const { commission_type, commission_percentage, amount } = req.body;
+
+    const checkcommission = await pool.query(
+      "SELECT * FROM commission WHERE commission_type = $1",
+      [commission_type]
+    );
+
+    if (checkcommission.rows.length != 0) {
+      return res.json({
+        status: "NAK",
+        data: "The commission type already exist",
+      });
+    }
+
+    const commission = await pool.query(
+      "INSERT INTO commission (commission_type, commission_percentage, amount) VALUES ($1, $2, $3) RETURNING * ",
+      [commission_type, commission_percentage, amount]
+    );
+    res.json({ status: "AK", data: commission.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//get Single commission
+
+router.get("/commission/:commission_id", authorization, async (req, res) => {
+  try {
+    const { commission_id } = req.params;
+    const commission = await pool.query(
+      "SELECT * FROM commission WHERE commission_id = $1",
+      [commission_id]
+    );
+    res.json({ status: "AK", data: commission.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Update Commission
+
+router.put("/commission/:commission_id", authorization, async (req, res) => {
+  try {
+    const { commission_id } = req.params;
+    const { commission_percentage, amount } = req.body;
+    const checkcommission = await pool.query(
+      "SELECT * FROM commission WHERE commission_id = $1",
+      [commission_id]
+    );
+
+    if (checkcommission.rows.length === 0) {
+      return res.json({
+        status: "NAK",
+        data: "commission type not found",
+      });
+    }
+    const commission = await pool.query(
+      "UPDATE commission SET commission_percentage = $1, amount = $2 WHERE commission_id = $3 RETURNING *",
+      [commission_percentage, amount, commission_id]
+    );
+    console.log(commission.rows[0]);
+    res.json({
+      status: "AK",
+      data: commission.rows[0],
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
 module.exports = router;
