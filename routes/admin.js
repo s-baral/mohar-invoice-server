@@ -394,4 +394,106 @@ router.put(
   }
 );
 
+// Card Information
+//Get all Card information from table card_info
+router.get("/card_info", authorization, async (req, res) => {
+  try {
+    const card_info = await pool.query("SELECT * FROM card_info");
+    res.json({ status: "AK", data: card_info.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Post new card number/ information into the table card_info
+router.post("/card_info", authorization, async (req, res) => {
+  try {
+    const { card_number, remarks } = req.body;
+
+    const checkCard = await pool.query(
+      "SELECT * FROM card_info WHERE card_number = $1",
+      [card_number]
+    );
+
+    if (checkCard.rows.length != 0) {
+      return res.json({
+        status: "NAK",
+        data: "The card number already exist",
+      });
+    }
+
+    const card_info = await pool.query(
+      "INSERT INTO card_info (card_number, remarks) VALUES ($1, $2) RETURNING * ",
+      [card_number, remarks]
+    );
+    res.json({ status: "AK", data: card_info.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//get Single card information from database card_info
+
+router.get("/card_info/:card_number", authorization, async (req, res) => {
+  try {
+    const { card_number } = req.params;
+    const card_info = await pool.query(
+      "SELECT * FROM card_info WHERE card_number = $1",
+      [card_number]
+    );
+    res.json({ status: "AK", data: card_info.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Update card information in database card_info
+
+router.put("/card_info/:card_number", authorization, async (req, res) => {
+  try {
+    const { card_number } = req.params;
+    const { remarks } = req.body;
+    const checkCard = await pool.query(
+      "SELECT * FROM card_info WHERE card_number = $1",
+      [card_number]
+    );
+
+    if (checkCard.rows.length === 0) {
+      return res.json({
+        status: "NAK",
+        data: "Card not found",
+      });
+    }
+    const card_info = await pool.query(
+      "UPDATE card_info SET card_number = $1, remarks = $2 WHERE card_number = $3 RETURNING *",
+      [card_number, remarks, card_number]
+    );
+    console.log(card_info.rows[0]);
+    res.json({
+      status: "AK",
+      data: card_info.rows[0],
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+router.delete("/card_info/:card_number", authorization, async (req, res) => {
+  try {
+    const { card_number } = req.params;
+    const card_info = await pool.query(
+      "DELETE FROM card_info WHERE card_number = $1",
+      [card_number]
+    );
+    res.json({ status: "AK", data: "The card info has been deleted." });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
 module.exports = router;
