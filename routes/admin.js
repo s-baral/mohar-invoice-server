@@ -496,4 +496,118 @@ router.delete("/card_info/:card_number", authorization, async (req, res) => {
   }
 });
 
+// Card Types information
+//Get all Card information from table card_info
+router.get("/card_type", authorization, async (req, res) => {
+  try {
+    const card_type = await pool.query("SELECT * FROM card_type");
+    res.json({ status: "AK", data: card_type.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Post new card type/ information into the table card_type
+router.post("/card_type", authorization, async (req, res) => {
+  try {
+    const { card_type_id, card_type } = req.body;
+
+    const checkCardtype = await pool.query(
+      "SELECT * FROM card_type WHERE card_type_id = $1 OR card_type = $2",
+      [card_type_id]
+    );
+
+    if (checkCardtype.rows.length != 0) {
+      return res.json({
+        status: "NAK",
+        data: "The card type already exist",
+      });
+    }
+
+    const card_type_info = await pool.query(
+      "INSERT INTO card_type (card_type) VALUES ($1) RETURNING * ",
+      [card_type]
+    );
+    res.json({ status: "AK", data: card_type_info.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//get Single card type information from database card_type
+
+router.get("/card_type/:card_type_id", authorization, async (req, res) => {
+  try {
+    const { card_type_id } = req.params;
+    const card_type = await pool.query(
+      "SELECT * FROM card_type WHERE card_type_id = $1",
+      [card_type_id]
+    );
+    res.json({ status: "AK", data: card_type.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Update card type information in database card_type
+
+router.put("/card_type/:card_type_id", authorization, async (req, res) => {
+  try {
+    const { card_type_id } = req.params;
+    const { card_type } = req.body;
+    const checkCardtype = await pool.query(
+      "SELECT * FROM card_type WHERE card_type_id = $1",
+      [card_type_id]
+    );
+
+    /*
+
+    if (checkCardtype.rows.length === 0) {
+      return res.json({
+        status: "NAK",
+        data: "Card type not found",
+      });
+    }
+
+    */
+    if (checkCardtype.rows.length != 0) {
+      return res.json({
+        status: "NAK",
+        data: "Card type already exists",
+      });
+    }
+
+    const card_type_info = await pool.query(
+      "UPDATE card_type SET card_type = $1 WHERE card_type_id = $3 RETURNING *",
+      [card_type, card_type_id]
+    );
+    console.log(card_type_info.rows[0]);
+    res.json({
+      status: "AK",
+      data: card_type_info.rows[0],
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Delete card type information
+router.delete("/card_type/:card_type_id", authorization, async (req, res) => {
+  try {
+    const { card_type_id } = req.params;
+    const card_type = await pool.query(
+      "DELETE FROM card_type WHERE card_type_id = $1",
+      [card_type_id]
+    );
+    res.json({ status: "AK", data: "The card type has been deleted." });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
 module.exports = router;
