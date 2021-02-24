@@ -3,13 +3,14 @@ const pool = require("../db");
 const jwtGenerator = require("../utils/jwtGenerator");
 const validInfo = require("../middleware/validInfo");
 const authorization = require("../middleware/authorization");
+const USER_ROLES = require("../utils/constants");
 
-router.get("/customer/:card_number", authorization, async (req, res) => {
+router.get("/:card_number", authorization(USER_ROLES.ALL), async (req, res) => {
   try {
     const { card_number } = req.params;
 
     const customer = await pool.query(
-      "SELECT * FROM customer WHERE card_number = $1",
+      "SELECT customer.customer_id, customer.customer_name, customer.customer_address, customer.card_number, card_type.card_type, customer.contact_number FROM customer INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id WHERE customer.card_number = $1",
       [card_number]
     );
     if (customer.rows.length === 0) {
