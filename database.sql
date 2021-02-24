@@ -111,7 +111,7 @@ CREATE TABLE card_type(
 INSERT INTO card_type (card_type) VALUES ('Regular');
 
 
-CREATE TABLE card_sales_for_VAT(
+CREATE TABLE card_sales(
     card_sales_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     load_agent_id uuid,
     customer_id uuid,
@@ -160,8 +160,8 @@ CREATE TABLE card_sales_for_TDS(
 );
 
 
-CREATE TABLE card_reload_for_VAT(
-    card_reload_for_VAT_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE card_reload(
+    card_reload_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     load_agent_id uuid,
     customer_id uuid,
     commission_id uuid,
@@ -177,7 +177,7 @@ CREATE TABLE card_reload_for_VAT(
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
     FOREIGN KEY (commission_id) REFERENCES commission(commission_id)   
 );
-
+/*
 CREATE TABLE card_reload_for_TDS(
     card_reload_for_VAT_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     load_agent_id uuid,
@@ -194,7 +194,7 @@ CREATE TABLE card_reload_for_TDS(
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
     FOREIGN KEY (commission_id) REFERENCES commission(commission_id)   
 );
-
+*/
 SELECT load_agent.load_agent_name,
 pos.pos_id,
 customer.customer_name,
@@ -255,3 +255,78 @@ INNER JOIN customer ON customer.customer_id = $2
 INNER JOIN pos ON pos.pos_id = load_agent.pos_id 
 INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id 
 WHERE card_sales_for_VAT.card_sales_id = $3
+
+SELECT inspector.inspector_name,
+pos.pos_id,
+customer.customer_name,
+customer.contact_number,
+card_type.card_type,
+customer.card_number,
+penalty_reason.issue,
+penalty_reason.penalty_amount,
+penalty.transaction_date
+FROM penalty
+INNER JOIN inspector ON inspector.inspector_id = penalty.inspector_id
+INNER JOIN customer ON customer.customer_id = penalty.customer_id
+INNER JOIN pos ON pos.pos_id = inspector.pos_id
+INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id
+INNER JOIN penalty_reason ON penalty_reason.penalty_reason_id = penalty.penalty_reason_id
+
+ALTER TABLE inspector
+ADD COLUMN inspector_PAN VARCHAR(50),
+ADD COLUMN inspector_citizenship_number VARCHAR(50);
+
+ALTER TABLE inspector ALTER COLUMN inspector_citizenship_number SET NOT NULL;
+
+UPDATE inspector SET inspector_citizenship_number = '456/789' WHERE inspector_id = '807f2a3c-086d-48ab-a719-a923050b7a25';
+ALTER TABLE inspector ALTER COLUMN inspector_citizenship_number SET NOT NULL;
+
+SELECT customer.customer_id, customer.customer_name, customer.customer_address, customer.card_number, card_type.card_type, customer.contact_number 
+FROM customer 
+INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id 
+WHERE customer.card_number = $1
+
+ALTER TABLE card_info
+ADD COLUMN remarks VARCHAR(50);
+
+SELECT card_sales.card_sales_id
+customer.customer_name,
+card_type.card_type, 
+customer.card_number, 
+card_sales.acquired_commission, 
+card_sales.tds_for_commission, 
+card_sales.vat_for_commission,
+card_sales.transaction_date
+FROM card_sales 
+INNER JOIN customer ON customer.customer_id = card_sales.customer_id
+INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id
+WHERE load_agent_id = $3
+
+SELECT card_reload.card_reload_id
+customer.customer_name,
+card_type.card_type, 
+customer.card_number, 
+card_reload.acquired_commission, 
+card_reload.tds_for_commission, 
+card_reload.vat_for_commission,
+card_reload.transaction_date
+FROM card_reload 
+INNER JOIN customer ON customer.customer_id = card_sales.customer_id
+INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id
+WHERE load_agent_id = $3
+
+SELECT penalty.penalty_id,
+pos.pos_id,
+customer.customer_name,
+card_type.card_type,
+customer.card_number,
+penalty_reason.issue,
+penalty_reason.penalty_amount,
+penalty.transaction_date
+FROM penalty
+INNER JOIN inspector ON inspector.inspector_id = penalty.inspector_id
+INNER JOIN customer ON customer.customer_id = penalty.customer_id
+INNER JOIN pos ON pos.pos_id = inspector.pos_id
+INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id
+INNER JOIN penalty_reason ON penalty_reason.penalty_reason_id = penalty.penalty_reason_id
+WHERE penalty.inspector_id = $1
