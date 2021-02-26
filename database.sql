@@ -330,3 +330,7 @@ INNER JOIN pos ON pos.pos_id = inspector.pos_id
 INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id
 INNER JOIN penalty_reason ON penalty_reason.penalty_reason_id = penalty.penalty_reason_id
 WHERE penalty.inspector_id = $1
+
+SELECT participants.participants_type
+FROM load_agent
+INNER JOIN participants ON load_agent.participants_id = participants.participants_id WHERE load_agent_id = 
