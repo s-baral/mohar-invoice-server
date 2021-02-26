@@ -238,7 +238,7 @@ router.post(
   authorization(USER_ROLES.LOADAGENT),
   async (req, res) => {
     try {
-      const { customer_id, participants_type } = req.body;
+      const { customer_id } = req.body;
 
       const card_sale = await pool.query(
         "SELECT * FROM card_sales WHERE customer_id = $1",
@@ -250,6 +250,13 @@ router.post(
           data: "Card has already been sold to the customer.",
         });
       }
+      const participants = await pool.query(
+        "SELECT participants.participants_type FROM load_agent INNER JOIN participants ON load_agent.participants_id = participants.participants_id WHERE load_agent_id = $1",
+        [req.id]
+      );
+
+      const par = participants.rows[0].participants_type;
+
       const commission_id = "3d4a072a-c15a-4c01-a522-46b697a6b002";
 
       const commission_percent = await pool.query(
@@ -304,15 +311,15 @@ router.post(
       let TDS_for_commission;
       let VAT_for_commission;
 
-      if (participants_type === "VAT-registered Load Agent") {
+      if (par === "VAT-registered Load Agent") {
         acquired_commission = commission_amount / 1.145;
         TDS_for_commission = acquired_commission * 0.015;
         VAT_for_commission = acquired_commission * 0.13;
-      } else if (participants_type === "VAT-Not-registered Load Agent") {
+      } else if (par === "VAT-Not-registered Load Agent") {
         acquired_commission = commission_amount / 1.15;
         TDS_for_commission = acquired_commission * 0.15;
         VAT_for_commission = 0;
-      } else if (participants_type === "Mohar CSA") {
+      } else if (par === "Mohar CSA") {
         acquired_commission = 0;
         TDS_for_commission = 0;
         VAT_for_commission = 0;
@@ -424,7 +431,13 @@ router.post(
   authorization(USER_ROLES.LOADAGENT),
   async (req, res) => {
     try {
-      const { customer_id, card_number, participants_type, amount } = req.body;
+      const { customer_id, card_number, amount } = req.body;
+
+      const participants = await pool.query(
+        "SELECT participants.participants_type FROM load_agent INNER JOIN participants ON load_agent.participants_id = participants.participants_id WHERE load_agent_id = $1",
+        [req.id]
+      );
+      const par = participants.rows[0].participants_type;
 
       const commission_id = "0b98cd67-ba55-43d2-a996-ef0d71f6f864";
 
@@ -454,15 +467,15 @@ router.post(
       let TDS_for_commission;
       let VAT_for_commission;
 
-      if (participants_type === "VAT-registered Load Agent") {
+      if (par === "VAT-registered Load Agent") {
         acquired_commission = commission_amount / 1.145;
         TDS_for_commission = acquired_commission * 0.015;
         VAT_for_commission = acquired_commission * 0.13;
-      } else if (participants_type === "VAT-Not-registered Load Agent") {
+      } else if (par === "VAT-Not-registered Load Agent") {
         acquired_commission = commission_amount / 1.15;
         TDS_for_commission = acquired_commission * 0.15;
         VAT_for_commission = 0;
-      } else if (participants_type === "Mohar CSA") {
+      } else if (par === "Mohar CSA") {
         acquired_commission = 0;
         TDS_for_commission = 0;
         VAT_for_commission = 0;
@@ -561,5 +574,59 @@ router.post("/card-reload-for-TDS/amount", authorization, async (req, res) => {
   }
 });
 */
+
+router.get(
+  "/dashboard",
+  authorization(USER_ROLES.LOADAGENT),
+  async (req, res) => {
+    try {
+      //res.json(req.id);
+      const load_agent = await pool.query(
+        "SELECT load_agent.load_agent_id, load_agent.load_agent_name, load_agent.load_agent_username, load_agent.load_agent_address, load_agent.load_agent_email, load_agent.load_agent_pan, load_agent.load_agent_citizenship_number, participants.participants_type, load_agent.pos_id FROM load_agent INNER JOIN participants ON participants.participants_id = load_agent.participants_id WHERE load_agent.load_agent_id = $1",
+        [req.id]
+      );
+      res.json({ status: "AK", data: load_agent.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//Get card-sales details of loadagent
+router.get(
+  "/card-sales-details",
+  authorization(USER_ROLES.LOADAGENT),
+  async (req, res) => {
+    try {
+      const load_agent = await pool.query(
+        "SELECT card_sales.card_sales_id, customer.customer_name, card_type.card_type, customer.card_number, commission.amount, commission.commission_percentage, card_sales.acquired_commission, card_sales.tds_for_commission, card_sales.vat_for_commission, card_sales.transaction_date FROM card_sales INNER JOIN customer ON customer.customer_id = card_sales.customer_id INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id INNER JOIN commission ON commission.commission_id = card_sales.commission_id WHERE load_agent_id = $1 ORDER BY card_sales.transaction_date DESC",
+        [req.id]
+      );
+      res.json({ status: "AK", data: load_agent.rows });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//Get card-reload details of loadagent
+router.get(
+  "/card-reload-details",
+  authorization(USER_ROLES.LOADAGENT),
+  async (req, res) => {
+    try {
+      const load_agent = await pool.query(
+        "SELECT card_reload.card_reload_id, customer.customer_name, card_type.card_type, customer.card_number, card_reload.total_amount,commission.commission_percentage, card_reload.acquired_commission, card_reload.tds_for_commission, card_reload.vat_for_commission, card_reload.transaction_date FROM card_reload INNER JOIN customer ON customer.customer_id = card_reload.customer_id INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id INNER JOIN commission ON commission.commission_id = card_reload.commission_id WHERE load_agent_id = $1 ORDER BY card_reload.transaction_date DESC",
+        [req.id]
+      );
+      res.json({ status: "AK", data: load_agent.rows });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
 
 module.exports = router;
