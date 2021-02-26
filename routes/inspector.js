@@ -138,4 +138,22 @@ router.post(
   }
 );
 
+//Get penalty details of inspector
+router.get(
+  "/penalty-details",
+  authorization(USER_ROLES.INSPECTOR),
+  async (req, res) => {
+    try {
+      const inspector = await pool.query(
+        "SELECT penalty.penalty_id, pos.pos_id, customer.customer_name, card_type.card_type, customer.card_number, penalty_reason.issue,penalty_reason.penalty_amount, penalty.transaction_date FROM penalty INNER JOIN inspector ON inspector.inspector_id = penalty.inspector_id INNER JOIN customer ON customer.customer_id = penalty.customer_id INNER JOIN pos ON pos.pos_id = inspector.pos_id INNER JOIN card_type ON card_type.card_type_id = customer.card_type_id INNER JOIN penalty_reason ON penalty_reason.penalty_reason_id = penalty.penalty_reason_id WHERE penalty.inspector_id = $1",
+        [req.id]
+      );
+      res.json({ status: "AK", data: inspector.rows });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
 module.exports = router;
