@@ -142,6 +142,13 @@ router.get(
       const pos = await pool.query("SELECT * FROM pos WHERE pos_id = $1", [
         pos_id,
       ]);
+
+      if (pos.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "POS not found in database. Invalid POS.",
+        });
+      }
       res.json({ status: "AK", data: pos.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -239,6 +246,14 @@ router.get(
         "SELECT * FROM commission WHERE commission_id = $1",
         [commission_id]
       );
+
+      if (commission.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Commission not found in database. Invalid commission.",
+        });
+      }
+
       res.json({ status: "AK", data: commission.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -427,6 +442,12 @@ router.get(
         "SELECT * FROM card_info WHERE card_number = $1",
         [card_number]
       );
+      if (card_info.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Card Number not found in database. Invalid Card Number.",
+        });
+      }
       res.json({ status: "AK", data: card_info.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -541,6 +562,13 @@ router.get(
         "SELECT * FROM card_type WHERE card_type_id = $1",
         [card_type_id]
       );
+
+      if (card_type.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Card_type not found in database. Invalid Card_type.",
+        });
+      }
       res.json({ status: "AK", data: card_type.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -748,6 +776,13 @@ router.get(
         "SELECT * FROM load_agent WHERE load_agent_id = $1",
         [load_agent_id]
       );
+
+      if (load_agent.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Load agent not found in database. Invalid Load agent.",
+        });
+      }
       res.json({ status: "AK", data: load_agent.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -762,7 +797,7 @@ router.put(
   async (req, res) => {
     try {
       const { load_agent_id } = req.params;
-      const { name, address, pos_id, participants_id } = req.body;
+      const { name, address, participants_id } = req.body;
       const checkLoadagent = await pool.query(
         "SELECT * FROM load_agent WHERE load_agent_id = $1",
         [load_agent_id]
@@ -775,43 +810,9 @@ router.put(
         });
       }
 
-      //check POS
-      const checkpos = await pool.query(
-        "SELECT pos_id FROM pos WHERE pos_id = $1",
-        [pos_id]
-      );
-      if (checkpos.rows.length === 0) {
-        return res.json({
-          status: "NAK",
-          data: "POS not found in database",
-        });
-      }
-      const pos = await pool.query(
-        "SELECT pos_id FROM load_agent WHERE pos_id = $1",
-        [pos_id]
-      );
-
-      if (pos.rows.length != 0) {
-        return res.json({
-          status: "NAK",
-          data: "POS device already used for load agent.",
-        });
-      }
-
-      const pos1 = await pool.query(
-        "SELECT pos_id FROM inspector WHERE pos_id = $1",
-        [pos_id]
-      );
-
-      if (pos1.rows.length != 0) {
-        return res.json({
-          status: "NAK",
-          data: "POS device already used for inspector.",
-        });
-      }
       const load_agent = await pool.query(
-        "UPDATE load_agent SET load_agent_name = $1, load_agent_address = $2, pos_id = $3, participants_id = $4 WHERE load_agent_id = $5 RETURNING *",
-        [name, address, pos_id, participants_id, load_agent_id]
+        "UPDATE load_agent SET load_agent_name = $1, load_agent_address = $2, participants_id = $3 WHERE load_agent_id = $4 RETURNING *",
+        [name, address, participants_id, load_agent_id]
       );
       //console.log(load_agent.rows[0]);
       res.json({
@@ -897,7 +898,7 @@ router.post("/inspector", authorization(USER_ROLES.ADMIN), async (req, res) => {
     if (pos.rows.length != 0) {
       return res.json({
         status: "NAK",
-        data: "POS device already used for load agent.",
+        data: "POS device already assigned for load agent.",
       });
     }
 
@@ -909,7 +910,7 @@ router.post("/inspector", authorization(USER_ROLES.ADMIN), async (req, res) => {
     if (pos1.rows.length != 0) {
       return res.json({
         status: "NAK",
-        data: "POS device already used for inspector.",
+        data: "POS device already assigned for inspector.",
       });
     }
 
@@ -989,6 +990,13 @@ router.get(
         "SELECT inspector_id, inspector_name, inspector_address, inspector_email, inspector_username, pos_id, inspector_pan, inspector_citizenship_number FROM inspector WHERE inspector_id = $1",
         [inspector_id]
       );
+
+      if (inspector.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Inspector not found in database. Invalid Inspector.",
+        });
+      }
       res.json({ status: "AK", data: inspector.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -1004,7 +1012,7 @@ router.put(
   async (req, res) => {
     try {
       const { inspector_id } = req.params;
-      const { name, address, pos_id } = req.body;
+      const { name, address } = req.body;
       const checkinspector = await pool.query(
         "SELECT * FROM inspector WHERE inspector_id = $1",
         [inspector_id]
@@ -1017,11 +1025,12 @@ router.put(
         });
       }
 
+      //Check POS
+      /*
       const checkpos = await pool.query(
         "SELECT pos_id FROM pos WHERE pos_id = $1",
         [pos_id]
       );
-      //check POS
 
       if (checkpos.rows.length === 0) {
         return res.json({
@@ -1052,9 +1061,10 @@ router.put(
           data: "POS device already used for inspector.",
         });
       }
+      */
       const inspector = await pool.query(
-        "UPDATE inspector SET inspector_name = $1, inspector_address = $2, pos_id = $3 WHERE inspector_id = $4 RETURNING *",
-        [name, address, pos_id, inspector_id]
+        "UPDATE inspector SET inspector_name = $1, inspector_address = $2 WHERE inspector_id = $3 RETURNING *",
+        [name, address, inspector_id]
       );
       console.log(inspector.rows[0]);
       res.json({
@@ -1147,6 +1157,13 @@ router.get(
         "SELECT * FROM participants WHERE participants_id = $1",
         [participants_id]
       );
+
+      if (participants.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Participants not found in database. Invalid Participant.",
+        });
+      }
       res.json({ status: "AK", data: participants.rows[0] });
     } catch (err) {
       console.error(err.message);
@@ -1194,6 +1211,251 @@ router.put(
       res.json({
         status: "AK",
         data: "Successfully Updated",
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//Get all amc types
+router.get("/amc-type", authorization(USER_ROLES.ADMIN), async (req, res) => {
+  try {
+    const amc_type = await pool.query("SELECT * FROM amc_types");
+    res.json({ status: "AK", data: amc_type.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//CRU for Merchants
+
+//Get all merchants
+router.get("/merchants", authorization(USER_ROLES.ADMIN), async (req, res) => {
+  try {
+    const merchant = await pool.query("SELECT * FROM merchants");
+    res.json({ status: "AK", data: merchant.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ status: "NAK", data: "Server Error" });
+  }
+});
+
+//Get single merchant
+router.get(
+  "/merchants/:merchant_id",
+  authorization(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      const { merchant_id } = req.params;
+      const merchant = await pool.query(
+        "SELECT * FROM merchants WHERE merchant_id = $1",
+        [merchant_id]
+      );
+
+      if (merchant.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Merchant not found in database. Invalid Merchant.",
+        });
+      }
+      res.json({ status: "AK", data: merchant.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+// update merchants
+router.put(
+  "/merchants/:merchant_id",
+  authorization(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      const { merchant_id } = req.params;
+      const {
+        contact_person,
+        contact_number,
+        email,
+        city,
+        applications,
+        full_address,
+        total_terminals,
+        total_sim,
+      } = req.body;
+      const checkmerchants = await pool.query(
+        "SELECT * FROM merchants WHERE merchant_id = $1",
+        [merchant_id]
+      );
+
+      if (checkmerchants.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Merchant not found",
+        });
+      }
+      const merchant = await pool.query(
+        "UPDATE merchants SET contact_person = $1, contact_number = $2, email = $3, city = $4, applications = $5, full_address = $6, total_terminals = $7, total_sim = $8 WHERE merchant_id = $9 RETURNING *",
+        [
+          contact_person,
+          contact_number,
+          email,
+          city,
+          applications,
+          full_address,
+          total_terminals,
+          total_sim,
+          merchant_id,
+        ]
+      );
+      console.log(merchant.rows[0]);
+      res.json({
+        status: "AK",
+        data: "Information has been updated",
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//CRU for Finance Admin
+router.post(
+  "/finance-admin",
+  authorization(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      //1. Destructure the req.body (name, address, email, username, password)
+      const {
+        name,
+        address,
+        contact_number,
+        email,
+        username,
+        password,
+        pan,
+        citizenship_number,
+      } = req.body;
+
+      //2. check if user exist (if user exists then throw error)
+
+      const finance_admin = await pool.query(
+        "SELECT * FROM finance_admin WHERE finance_admin_email = $1 OR finance_admin_username = $2 OR finance_admin_contact_number = $3 OR finance_admin_pan = $4 OR finance_admin_citizenship_number = $5",
+        [email, username, contact_number, pan, citizenship_number]
+      );
+
+      if (finance_admin.rows.length != 0) {
+        return res.json({ status: "NAK", data: "User already exist" });
+      }
+
+      //res.json(loadagents.rows);
+
+      //3. Bcrypt the user password
+      const saltRound = 10;
+      const salt = await bcrypt.genSalt(saltRound);
+      const bcryptPassword = await bcrypt.hash(password, salt);
+
+      //4. enter the new user inside our database
+
+      const newFinanceAdmin = await pool.query(
+        "INSERT INTO finance_admin (finance_admin_name, finance_admin_address, finance_admin_contact_number, finance_admin_email, finance_admin_username, finance_admin_password, finance_admin_pan, finance_admin_citizenship_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING * ",
+        [
+          name,
+          address,
+          contact_number,
+          email,
+          username,
+          bcryptPassword,
+          pan,
+          citizenship_number,
+        ]
+      );
+
+      res.json({ status: "AK", data: newFinanceAdmin.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//Get all finance admins
+router.get(
+  "/finance-admin",
+  authorization(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      const finance_admin = await pool.query(
+        "SELECT finance_admin_id, finance_admin_name, finance_admin_address, finance_admin_contact_number, finance_admin_email, finance_admin_username, finance_admin_pan, finance_admin_citizenship_number FROM finance_admin"
+      );
+      res.json({ status: "AK", data: finance_admin.rows });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+//Get single Finance Admin
+router.get(
+  "/finance-admin/:finance_admin_id",
+  authorization(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      const { finance_admin_id } = req.params;
+      const finance_admin = await pool.query(
+        "SELECT finance_admin_id, finance_admin_name, finance_admin_address, finance_admin_contact_number, finance_admin_email, finance_admin_username, finance_admin_pan, finance_admin_citizenship_number FROM finance_admin WHERE finance_admin_id = $1",
+        [finance_admin_id]
+      );
+
+      if (finance_admin.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Finance Admin not found in database. Invalid Finance Admin.",
+        });
+      }
+      res.json({ status: "AK", data: finance_admin.rows[0] });
+    } catch (err) {
+      console.error(err.message);
+      res.json({ status: "NAK", data: "Server Error" });
+    }
+  }
+);
+
+router.put(
+  "/finance-admin/:finance_admin_id",
+  authorization(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      const { finance_admin_id } = req.params;
+      const { name, address, pan } = req.body;
+      const checkFinanceAdmin = await pool.query(
+        "SELECT * FROM finance_admin WHERE finance_admin_id = $1",
+        [finance_admin_id]
+      );
+
+      if (checkFinanceAdmin.rows.length === 0) {
+        return res.json({
+          status: "NAK",
+          data: "Finance Admin not found",
+        });
+      }
+      const updatefinance_admin = await pool.query(
+        "UPDATE finance_admin SET finance_admin_name = $1, finance_admin_address = $2, finance_admin_pan = $3 WHERE finance_admin_id = $4 RETURNING *",
+        [name, address, pan, finance_admin_id]
+      );
+      const finance_admin = await pool.query(
+        "SELECT finance_admin_id, finance_admin_name, finance_admin_address, finance_admin_contact_number, finance_admin_email, finance_admin_username, finance_admin_pan, finance_admin_citizenship_number FROM finance_admin WHERE finance_admin_id = $1",
+        [finance_admin_id]
+      );
+      res.json({
+        status: "AK",
+        data: "Information has been updated",
+        data: finance_admin.rows[0],
       });
     } catch (err) {
       console.error(err.message);
